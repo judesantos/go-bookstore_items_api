@@ -18,7 +18,14 @@ func mapUrls() {
 	// get item by id
 
 	router.HandleFunc(
-		"/items/:item_id",
+		"/items/{id}",
 		controllers.ItemsController.Get,
 	).Methods(http.MethodGet)
+
+	// search item
+
+	router.HandleFunc(
+		"/items/search",
+		controllers.ItemsController.Search,
+	).Methods(http.MethodPost)
 }

@@ -1,12 +1,16 @@
 package controllers
 
+// items_controller.go
+
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/judesantos/go-bookstore_items_api/domain/items"
+	"github.com/judesantos/go-bookstore_items_api/domain/queries"
 	"github.com/judesantos/go-bookstore_items_api/services"
 	"github.com/judesantos/go-bookstore_items_api/utils/http_utils"
 	"github.com/judesantos/go-bookstore_oauth/oauth"
@@ -20,6 +24,7 @@ var (
 type itemsControllerInterface interface {
 	Create(w http.ResponseWriter, r *http.Request)
 	Get(w http.ResponseWriter, r *http.Request)
+	Search(w http.ResponseWriter, r *http.Request)
 }
 
 type itemsController struct{}
@@ -34,7 +39,6 @@ func (c *itemsController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Headers:", r.Header)
 	userId := oauth.GetUserId(r)
 	if userId == 0 {
 		rerr := rest_errors.UnauthorizedError(
@@ -76,4 +80,43 @@ func (c *itemsController) Create(w http.ResponseWriter, r *http.Request) {
 //
 func (c *itemsController) Get(w http.ResponseWriter, r *http.Request) {
 
+	vars := mux.Vars(r)
+	itemId := strings.TrimSpace(vars["id"])
+
+	item, err := services.ItemsService.Get(itemId)
+	if err != nil {
+		http_utils.JsonErrorResponse(w, err)
+		return
+	}
+
+	http_utils.JsonSuccessResponse(w, http.StatusOK, item)
+}
+
+//
+// Search - search index controller
+//
+func (c *itemsController) Search(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		aerr := rest_errors.BadRequestError("empty json request")
+		http_utils.JsonErrorResponse(w, aerr)
+		return
+	}
+
+	defer r.Body.Close()
+
+	var query queries.EsQuery
+	if err := json.Unmarshal(bytes, &query); err != nil {
+		aerr := rest_errors.BadRequestError("error json request")
+		http_utils.JsonErrorResponse(w, aerr)
+		return
+	}
+
+	items, serr := services.ItemsService.Search(query)
+	if serr != nil {
+		http_utils.JsonErrorResponse(w, serr)
+		return
+	}
+
+	http_utils.JsonSuccessResponse(w, http.StatusOK, items)
 }

@@ -16,5 +16,5 @@ func JsonSuccessResponse(w http.ResponseWriter, status int, body interface{}) {
 func JsonErrorResponse(w http.ResponseWriter, err rest_errors.IRestError) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(err.Status())
-	json.NewEncoder(w).Encode(err)
+	json.NewEncoder(w).Encode(err.Message())
 }
